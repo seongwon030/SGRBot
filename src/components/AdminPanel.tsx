@@ -143,6 +143,7 @@ export const AdminPanel: React.FC = () => {
       const newMenuItem: MenuItem = {
         id: editingMenu?.id || Date.now().toString(),
         name: menuForm.name.trim(),
+        name_en: menuForm.name.trim(), // 한글명과 동일하게 임시 자동 할당
         description: menuForm.description.trim(),
         price: Number(menuForm.price),
         category: menuForm.category,

@@ -100,6 +100,27 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
     setTranscript("");
   }, []);
 
+  // 한글 숫자 → 숫자 변환 함수
+  const koreanNumberToDigit = (text: string): number | null => {
+    const map: { [key: string]: number } = {
+      한: 1,
+      하나: 1,
+      두: 2,
+      둘: 2,
+      세: 3,
+      셋: 3,
+      네: 4,
+      넷: 4,
+      다섯: 5,
+      여섯: 6,
+      일곱: 7,
+      여덟: 8,
+      아홉: 9,
+      열: 10,
+    };
+    return map[text] || null;
+  };
+
   // 음성 명령 처리 함수
   const processCommand = useCallback((text: string): VoiceCommand | null => {
     const lowerText = text.toLowerCase().trim();
@@ -131,11 +152,19 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
         }
       }
 
-      // 수량 추출
-      const quantityMatch = lowerText.match(/(\d+)개|(\d+)잔|(\d+)번/);
-      const quantity = quantityMatch
-        ? parseInt(quantityMatch[1] || quantityMatch[2] || quantityMatch[3])
-        : 1;
+      // 수량 추출 (숫자+개/잔/번 또는 한글 숫자+개/잔/번)
+      let quantity = 1;
+      const quantityMatch = lowerText.match(
+        /([0-9]+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)(개|잔|번)/
+      );
+      if (quantityMatch) {
+        if (quantityMatch[1].match(/[0-9]+/)) {
+          quantity = parseInt(quantityMatch[1]);
+        } else {
+          const kNum = koreanNumberToDigit(quantityMatch[1]);
+          if (kNum) quantity = kNum;
+        }
+      }
 
       if (foundMenu) {
         return {

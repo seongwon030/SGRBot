@@ -174,30 +174,75 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
 
       switch (command.intent) {
         case "add_item":
-          if (command.entity) {
-            // 더 정확한 메뉴 매칭 로직
+          // 여러 메뉴 동시 주문 지원
+          if (
+            command.items &&
+            Array.isArray(command.items) &&
+            command.items.length > 0
+          ) {
+            let addedMenus: string[] = [];
+            let soldOutMenus: string[] = [];
+            let notFoundMenus: string[] = [];
+            command.items.forEach((item) => {
+              const menuItem = state.menuItems.find(
+                (m) => m.name === item.name
+              );
+              if (menuItem && menuItem.available) {
+                dispatch({
+                  type: "ADD_TO_CART",
+                  payload: { menuItem, quantity: item.quantity || 1 },
+                });
+                addedMenus.push(`${menuItem.name} ${item.quantity || 1}개`);
+              } else if (menuItem && !menuItem.available) {
+                soldOutMenus.push(menuItem.name);
+              } else {
+                notFoundMenus.push(item.name);
+              }
+            });
+            if (addedMenus.length > 0) {
+              responseMessage += `${addedMenus.join(
+                ", "
+              )}를 장바구니에 담았습니다.`;
+            }
+            if (soldOutMenus.length > 0) {
+              responseMessage += `\n죄송합니다. ${soldOutMenus.join(
+                ", "
+              )}은(는) 현재 품절입니다.`;
+            }
+            if (notFoundMenus.length > 0) {
+              responseMessage += `\n죄송합니다. "${notFoundMenus.join(
+                ", "
+              )}" 메뉴를 찾을 수 없습니다.`;
+            }
+          } else if (command.entity) {
+            // 기존 단일 메뉴 처리
             const menuItem = state.menuItems.find((item) => {
+              const entity = (command.entity || "").toLowerCase();
               const itemName = item.name.toLowerCase();
-              const entity = command.entity!.toLowerCase();
-
-              // 정확한 이름 매칭 우선
-              if (itemName === entity) return true;
-
-              // 키워드가 메뉴 이름을 포함하는 경우
-              if (itemName.includes(entity)) return true;
-
-              // 특별한 키워드 매칭
-              if (entity === "버거" && itemName.includes("버거")) return true;
-              if (entity === "감자" && itemName.includes("감자")) return true;
+              const itemNameEn = (item.name_en || "").toLowerCase();
+              if (itemName === entity || itemNameEn === entity) return true;
+              if (itemName.includes(entity) || itemNameEn.includes(entity))
+                return true;
               if (
-                entity === "음료" &&
-                (itemName.includes("콜라") || itemName.includes("음료"))
+                entity === "버거" &&
+                (itemName.includes("버거") || itemNameEn.includes("burger"))
               )
                 return true;
-
+              if (
+                entity === "감자" &&
+                (itemName.includes("감자") || itemNameEn.includes("fries"))
+              )
+                return true;
+              if (
+                entity === "음료" &&
+                (itemName.includes("콜라") ||
+                  itemName.includes("음료") ||
+                  itemNameEn.includes("cola") ||
+                  itemNameEn.includes("drink"))
+              )
+                return true;
               return false;
             });
-
             if (menuItem && menuItem.available) {
               dispatch({
                 type: "ADD_TO_CART",
@@ -219,20 +264,33 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
             // 더 정확한 메뉴 매칭 로직
             const cartItem = state.cart.find((item) => {
               const itemName = item.menuItem.name.toLowerCase();
+              const itemNameEn = (item.menuItem.name_en || "").toLowerCase();
               const entity = command.entity!.toLowerCase();
 
               // 정확한 이름 매칭 우선
-              if (itemName === entity) return true;
+              if (itemName === entity || itemNameEn === entity) return true;
 
               // 키워드가 메뉴 이름을 포함하는 경우
-              if (itemName.includes(entity)) return true;
+              if (itemName.includes(entity) || itemNameEn.includes(entity))
+                return true;
 
               // 특별한 키워드 매칭
-              if (entity === "버거" && itemName.includes("버거")) return true;
-              if (entity === "감자" && itemName.includes("감자")) return true;
+              if (
+                entity === "버거" &&
+                (itemName.includes("버거") || itemNameEn.includes("burger"))
+              )
+                return true;
+              if (
+                entity === "감자" &&
+                (itemName.includes("감자") || itemNameEn.includes("fries"))
+              )
+                return true;
               if (
                 entity === "음료" &&
-                (itemName.includes("콜라") || itemName.includes("음료"))
+                (itemName.includes("콜라") ||
+                  itemName.includes("음료") ||
+                  itemNameEn.includes("cola") ||
+                  itemNameEn.includes("drink"))
               )
                 return true;
 
@@ -352,47 +410,26 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
     )
       return;
 
-    // 0. transcript에 '버거' 등 특정 키워드가 포함되어 있으면 후보 메뉴 안내
+    // fallback 후보 안내용: transcript에 '버거' 포함 시, GPT 분석 결과도 불명확할 때만 사용
     const lowerTranscript = trimmedTranscript.toLowerCase();
-    if (!menuSelectionCandidates && !pendingConfirmation) {
-      // '버거' 키워드 예시 (필요시 확장 가능)
-      if (lowerTranscript.includes("버거")) {
-        const burgerCandidates = state.menuItems
-          .filter((item) => item.available && item.name.includes("버거"))
-          .map((item) => item.name);
-        if (burgerCandidates.length > 0) {
-          setMenuSelectionCandidates({
-            candidates: burgerCandidates,
-            quantity: 1, // 수량 추출 로직 필요시 추가
-            originalTranscript: trimmedTranscript,
-          });
-          setResponse(
-            `버거 메뉴로는 ${burgerCandidates.join(
-              ", "
-            )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
-          );
-          speak(
-            `버거 메뉴로는 ${burgerCandidates.join(
-              ", "
-            )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
-          );
-          setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
-          return;
-        } else {
-          setResponse("버거 메뉴가 없습니다.");
-          speak("버거 메뉴가 없습니다.");
-          setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
-          return;
-        }
-      }
-    }
 
     // 1. 후보 메뉴 선택 모드일 때
     if (menuSelectionCandidates) {
       // 후보 메뉴명 중 하나가 transcript에 포함되어 있으면 선택 처리
-      const matched = menuSelectionCandidates.candidates.find((name) =>
-        trimmedTranscript.replace(/\s/g, "").includes(name.replace(/\s/g, ""))
-      );
+      const matched = menuSelectionCandidates.candidates.find((name) => {
+        const normName = name.replace(/\s/g, "").toLowerCase();
+        const normTranscript = trimmedTranscript
+          .replace(/\s/g, "")
+          .toLowerCase();
+        // 한글/영어 모두 비교
+        const menuObj = state.menuItems.find((item) => item.name === name);
+        if (!menuObj) return false;
+        const nameEn = (menuObj.name_en || "").replace(/\s/g, "").toLowerCase();
+        return (
+          normTranscript.includes(normName) ||
+          (nameEn && normTranscript.includes(nameEn))
+        );
+      });
       if (matched) {
         handleMenuCandidateSelect(matched);
         setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
@@ -457,13 +494,17 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
           // entity가 실제 메뉴명과 정확히 일치하지 않을 때, 부분 일치 후보 추출
           const entityStr = command.entity || "";
           const candidates = state.menuItems
-            .filter(
-              (item) =>
+            .filter((item) => {
+              const nameKo = item.name.replace(/\s/g, "").toLowerCase();
+              const nameEn = (item.name_en || "")
+                .replace(/\s/g, "")
+                .toLowerCase();
+              const entityNorm = entityStr.replace(/\s/g, "").toLowerCase();
+              return (
                 item.available &&
-                item.name
-                  .replace(/\s/g, "")
-                  .includes(entityStr.replace(/\s/g, ""))
-            )
+                (nameKo.includes(entityNorm) || nameEn.includes(entityNorm))
+              );
+            })
             .map((item) => item.name);
           if (candidates.length > 1) {
             setMenuSelectionCandidates({
@@ -493,6 +534,42 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
             });
             setIsProcessing(false);
             return;
+          } else {
+            // fallback: transcript에 '버거' 포함 시 후보 안내 (항상 보장)
+            if (lowerTranscript.includes("버거")) {
+              const burgerCandidates = state.menuItems
+                .filter((item) => item.available && item.name.includes("버거"))
+                .map((item) => item.name);
+              if (burgerCandidates.length > 0) {
+                setMenuSelectionCandidates({
+                  candidates: burgerCandidates,
+                  quantity: command && command.quantity ? command.quantity : 1,
+                  originalTranscript: trimmedTranscript,
+                });
+                setResponse(
+                  `버거 메뉴로는 ${burgerCandidates.join(
+                    ", "
+                  )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
+                );
+                speak(
+                  `버거 메뉴로는 ${burgerCandidates.join(
+                    ", "
+                  )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
+                );
+                setIsProcessing(false);
+                return;
+              } else {
+                setResponse("다시 말씀해주세요.");
+                speak("다시 말씀해주세요.");
+                setIsProcessing(false);
+                return;
+              }
+            } else {
+              setResponse("다시 말씀해주세요.");
+              speak("다시 말씀해주세요.");
+              setIsProcessing(false);
+              return;
+            }
           }
         }
 
@@ -526,8 +603,39 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
         if (command) {
           handleVoiceCommand(command);
         } else {
-          setResponse("명령을 이해하지 못했습니다. 다시 말씀해주세요.");
-          speak("명령을 이해하지 못했습니다. 다시 말씀해주세요.");
+          // GPT 분석 결과가 null이거나 entity가 undefined/null일 때 fallbackKeywordMatching 시도
+          const fallbackCommand = processCommand(trimmedTranscript);
+          if (
+            fallbackCommand &&
+            fallbackCommand.intent === "add_item" &&
+            (fallbackCommand.entity === "버거" ||
+              lowerTranscript.includes("버거"))
+          ) {
+            const burgerCandidates = state.menuItems
+              .filter((item) => item.available && item.name.includes("버거"))
+              .map((item) => item.name);
+            if (burgerCandidates.length > 0) {
+              setMenuSelectionCandidates({
+                candidates: burgerCandidates,
+                quantity: fallbackCommand.quantity || 1,
+                originalTranscript: trimmedTranscript,
+              });
+              setResponse(
+                `버거 메뉴로는 ${burgerCandidates.join(
+                  ", "
+                )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
+              );
+              speak(
+                `버거 메뉴로는 ${burgerCandidates.join(
+                  ", "
+                )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
+              );
+              setIsProcessing(false);
+              return;
+            }
+          }
+          setResponse("다시 말씀해주세요.");
+          speak("다시 말씀해주세요.");
         }
       } catch (error) {
         console.error("음성 명령 분석 실패:", error);

@@ -1,7 +1,8 @@
 // 메뉴 아이템 타입
 export interface MenuItem {
   id: string;
-  name: string;
+  name: string; // 한글명
+  name_en: string; // 영어명
   description: string;
   price: number;
   category: string;
@@ -38,10 +39,14 @@ export type KioskMode = "customer" | "admin";
 
 // 음성 인식 관련 타입
 export interface VoiceCommand {
-  intent: "add_item" | "remove_item" | "show_menu" | "checkout" | "help";
+  intent: string;
   entity?: string;
   quantity?: number;
   confidence?: number;
+  items?: Array<{
+    name: string;
+    quantity: number;
+  }>;
 }
 
 // 앱 상태 타입

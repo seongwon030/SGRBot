@@ -30,32 +30,35 @@ export class GPTVoiceAnalyzer {
 
     try {
       const menuList = availableMenus
-        .map((item) => `- ${item.name}: ${item.price}원`)
+        .map((item) => `- ${item.name} (${item.name_en}): ${item.price}원`)
         .join("\n");
 
-      const systemPrompt = `당신은 키오스크 음성 주문 분석 전문가입니다. 사용자의 음성을 분석하여 메뉴 주문 의도를 파악해주세요.
+      const systemPrompt = `You are a kiosk voice order expert. Analyze the user's speech and extract the order intent in either Korean or English.
 
-사용 가능한 메뉴:
+Available menus:
 ${menuList}
 
-다음 JSON 형식으로만 응답해주세요:
+Respond ONLY in the following JSON format:
 {
   "intent": "add_item|remove_item|show_menu|checkout|help|unknown",
   "items": [
     {
-      "name": "정확한_메뉴명",
+      "name": "정확한_메뉴명_한글",
       "quantity": 숫자
-    }
+    },
+    ...
   ],
-  "confidence": 0.0-1.0 사이의 신뢰도
+  "confidence": 0.0-1.0
 }
 
-규칙:
-1. 정확한 메뉴명만 사용 (예: "치킨버거", "비프버거", "감자튀김", "콜라")
-2. 메뉴에 없는 항목은 포함하지 않음
-3. 수량이 명시되지 않으면 1개로 설정
-4. 애매한 표현은 confidence를 낮게 설정
-5. JSON만 응답, 다른 텍스트는 포함하지 않음`;
+Rules:
+1. If the user speaks in English, match the English menu name to the corresponding Korean menu name in the menu list and use the Korean name in the response.
+2. Only use exact menu names from the list above.
+3. If the menu is not available, do not include it.
+4. If quantity is not specified, set it to 1.
+5. For ambiguous expressions, set confidence low.
+6. If the user orders multiple menus at once (e.g., "치킨버거 하나, 콜라 두 개 주문"), return all items in the items array.
+7. Respond ONLY in JSON, no extra text.`;
 
       const response = await fetch(this.apiUrl, {
         method: "POST",
@@ -95,23 +98,28 @@ ${menuList}
       // JSON 파싱
       const result: GPTAnalysisResult = JSON.parse(content);
 
-      // VoiceCommand 형태로 변환
-      if (result.intent === "add_item" && result.items.length > 0) {
-        const firstItem = result.items[0];
-        // 실제 메뉴와 정확히 매칭되는지 확인
-        const matchedMenu = availableMenus.find(
-          (menu) => menu.name === firstItem.name
+      // VoiceCommand 형태로 변환 (여러 메뉴 지원)
+      if (
+        result.intent === "add_item" &&
+        result.items &&
+        result.items.length > 0
+      ) {
+        // 실제 메뉴와 정확히 매칭되는 것만 추림
+        const validItems = result.items.filter((item: any) =>
+          availableMenus.some((menu) => menu.name === item.name)
         );
-
-        if (matchedMenu) {
+        if (validItems.length > 0) {
           return {
             intent: "add_item",
-            entity: firstItem.name,
-            quantity: firstItem.quantity,
+            items: validItems,
             confidence: result.confidence,
           };
         }
-      } else if (result.intent === "remove_item" && result.items.length > 0) {
+      } else if (
+        result.intent === "remove_item" &&
+        result.items &&
+        result.items.length > 0
+      ) {
         const firstItem = result.items[0];
         return {
           intent: "remove_item",

@@ -41,6 +41,7 @@ const initialState: AppState = {
     {
       id: "1",
       name: "치킨버거",
+      name_en: "Chicken Burger",
       description: "바삭한 치킨 패티와 신선한 야채가 들어간 버거",
       price: 8500,
       category: "1",
@@ -49,6 +50,7 @@ const initialState: AppState = {
     {
       id: "2",
       name: "비프버거",
+      name_en: "Beef Burger",
       description: "100% 순쇠고기 패티로 만든 클래식 버거",
       price: 9500,
       category: "1",
@@ -57,6 +59,7 @@ const initialState: AppState = {
     {
       id: "3",
       name: "감자튀김",
+      name_en: "French Fries",
       description: "바삭하고 고소한 감자튀김",
       price: 3500,
       category: "2",
@@ -65,6 +68,7 @@ const initialState: AppState = {
     {
       id: "4",
       name: "콜라",
+      name_en: "Cola",
       description: "시원한 탄산음료",
       price: 2000,
       category: "3",
