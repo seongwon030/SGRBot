@@ -154,6 +154,17 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
     new Set()
   );
   const [gptResult, setGptResult] = useState(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    menuName: string;
+    quantity: number;
+    originalTranscript: string;
+  } | null>(null);
+  // 후보 메뉴 선택 플로우 상태
+  const [menuSelectionCandidates, setMenuSelectionCandidates] = useState<{
+    candidates: string[];
+    quantity: number;
+    originalTranscript: string;
+  } | null>(null);
 
   // 음성 명령 처리
   const handleVoiceCommand = useCallback(
@@ -281,54 +292,269 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
     [state.menuItems, state.cart, dispatch, speak]
   );
 
+  // 예/아니오 확인 처리 함수
+  const handleConfirmOrder = useCallback(
+    (isYes: boolean) => {
+      if (isYes && pendingConfirmation) {
+        handleVoiceCommand({
+          intent: "add_item",
+          entity: pendingConfirmation.menuName,
+          quantity: pendingConfirmation.quantity,
+          confidence: 1.0,
+        });
+      } else {
+        setResponse("다시 말씀해주세요.");
+        speak("다시 말씀해주세요.");
+      }
+      setPendingConfirmation(null);
+      resetTranscript();
+      startListening();
+    },
+    [
+      pendingConfirmation,
+      handleVoiceCommand,
+      speak,
+      resetTranscript,
+      startListening,
+    ]
+  );
+
+  // 후보 메뉴 선택 처리 함수
+  const handleMenuCandidateSelect = useCallback(
+    (menuName: string) => {
+      if (menuSelectionCandidates) {
+        handleVoiceCommand({
+          intent: "add_item",
+          entity: menuName,
+          quantity: menuSelectionCandidates.quantity,
+          confidence: 1.0,
+        });
+        setMenuSelectionCandidates(null);
+        resetTranscript();
+        startListening();
+      }
+    },
+    [
+      menuSelectionCandidates,
+      handleVoiceCommand,
+      resetTranscript,
+      startListening,
+    ]
+  );
+
   // 음성 인식 결과 처리 (Claude API 사용)
   useEffect(() => {
     const trimmedTranscript = transcript.trim();
     if (
-      trimmedTranscript &&
-      !isProcessing &&
-      !processedCommands.has(trimmedTranscript)
-    ) {
-      // 처리된 명령으로 추가
-      setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
+      !trimmedTranscript ||
+      isProcessing ||
+      processedCommands.has(trimmedTranscript)
+    )
+      return;
 
-      // GPT API로 음성 명령 분석
-      const analyzeCommand = async () => {
-        setIsProcessing(true);
-        try {
-          const command = await processCommandWithGPT(
-            trimmedTranscript,
-            state.menuItems.filter((item) => item.available)
+    // 0. transcript에 '버거' 등 특정 키워드가 포함되어 있으면 후보 메뉴 안내
+    const lowerTranscript = trimmedTranscript.toLowerCase();
+    if (!menuSelectionCandidates && !pendingConfirmation) {
+      // '버거' 키워드 예시 (필요시 확장 가능)
+      if (lowerTranscript.includes("버거")) {
+        const burgerCandidates = state.menuItems
+          .filter((item) => item.available && item.name.includes("버거"))
+          .map((item) => item.name);
+        if (burgerCandidates.length > 0) {
+          setMenuSelectionCandidates({
+            candidates: burgerCandidates,
+            quantity: 1, // 수량 추출 로직 필요시 추가
+            originalTranscript: trimmedTranscript,
+          });
+          setResponse(
+            `버거 메뉴로는 ${burgerCandidates.join(
+              ", "
+            )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
           );
-
-          if (command) {
-            handleVoiceCommand(command);
-          } else {
-            setResponse("명령을 이해하지 못했습니다. 다시 말씀해주세요.");
-            speak("명령을 이해하지 못했습니다. 다시 말씀해주세요.");
-          }
-        } catch (error) {
-          console.error("음성 명령 분석 실패:", error);
-          setResponse("음성 분석 중 오류가 발생했습니다. 다시 시도해주세요.");
-          speak("음성 분석 중 오류가 발생했습니다. 다시 시도해주세요.");
-        } finally {
-          setIsProcessing(false);
+          speak(
+            `버거 메뉴로는 ${burgerCandidates.join(
+              ", "
+            )}가 있습니다. 어떤 메뉴를 주문하시겠습니까?`
+          );
+          setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
+          return;
+        } else {
+          setResponse("버거 메뉴가 없습니다.");
+          speak("버거 메뉴가 없습니다.");
+          setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
+          return;
         }
-      };
-
-      analyzeCommand();
-
-      // 5초 후 transcript와 처리된 명령 기록 클리어
-      const clearTimer = setTimeout(() => {
-        resetTranscript();
-        setProcessedCommands(new Set());
-        if (!isProcessing && isVisible) {
-          startListening();
-        }
-      }, 5000);
-
-      return () => clearTimeout(clearTimer);
+      }
     }
+
+    // 1. 후보 메뉴 선택 모드일 때
+    if (menuSelectionCandidates) {
+      // 후보 메뉴명 중 하나가 transcript에 포함되어 있으면 선택 처리
+      const matched = menuSelectionCandidates.candidates.find((name) =>
+        trimmedTranscript.replace(/\s/g, "").includes(name.replace(/\s/g, ""))
+      );
+      if (matched) {
+        handleMenuCandidateSelect(matched);
+        setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
+        return;
+      } else {
+        setResponse(
+          `아래 메뉴 중에서 말씀해 주세요: ${menuSelectionCandidates.candidates.join(
+            ", "
+          )}`
+        );
+        speak(
+          `아래 메뉴 중에서 말씀해 주세요: ${menuSelectionCandidates.candidates.join(
+            ", "
+          )}`
+        );
+        setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
+        return;
+      }
+    }
+
+    // 2. 예/아니오 확인 모드일 때
+    if (pendingConfirmation) {
+      // '예' 또는 '아니오'만 인식
+      if (
+        ["예", "네", "응", "맞아", "그래"].some((v) =>
+          trimmedTranscript.includes(v)
+        )
+      ) {
+        handleConfirmOrder(true);
+      } else if (
+        ["아니오", "아니", "아냐", "노", "아니요"].some((v) =>
+          trimmedTranscript.includes(v)
+        )
+      ) {
+        handleConfirmOrder(false);
+      } else {
+        setResponse('"예" 또는 "아니오"로 답해주세요.');
+        speak('"예" 또는 "아니오"로 답해주세요.');
+      }
+      setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
+      return;
+    }
+
+    // 3. 일반 명령 모드
+    setProcessedCommands((prev) => new Set(prev).add(trimmedTranscript));
+    // GPT API로 음성 명령 분석
+    const analyzeCommand = async () => {
+      setIsProcessing(true);
+      try {
+        const command = await processCommandWithGPT(
+          trimmedTranscript,
+          state.menuItems.filter((item) => item.available)
+        );
+
+        // 후보 메뉴 추출: entity가 여러 메뉴와 부분 일치할 때
+        if (
+          command &&
+          command.intent === "add_item" &&
+          command.entity &&
+          !state.menuItems.some((item) => item.name === command.entity)
+        ) {
+          // entity가 실제 메뉴명과 정확히 일치하지 않을 때, 부분 일치 후보 추출
+          const entityStr = command.entity || "";
+          const candidates = state.menuItems
+            .filter(
+              (item) =>
+                item.available &&
+                item.name
+                  .replace(/\s/g, "")
+                  .includes(entityStr.replace(/\s/g, ""))
+            )
+            .map((item) => item.name);
+          if (candidates.length > 1) {
+            setMenuSelectionCandidates({
+              candidates,
+              quantity: command.quantity || 1,
+              originalTranscript: trimmedTranscript,
+            });
+            setResponse(
+              `어떤 ${entityStr}를 주문하시겠습니까? ${candidates.join(
+                ", "
+              )} 중에서 선택해주세요.`
+            );
+            speak(
+              `어떤 ${entityStr}를 주문하시겠습니까? ${candidates.join(
+                ", "
+              )} 중에서 선택해주세요.`
+            );
+            setIsProcessing(false);
+            return;
+          } else if (candidates.length === 1) {
+            // 후보가 1개면 바로 주문
+            handleVoiceCommand({
+              intent: "add_item",
+              entity: candidates[0],
+              quantity: command.quantity || 1,
+              confidence: 1.0,
+            });
+            setIsProcessing(false);
+            return;
+          }
+        }
+
+        // confidence가 낮거나 entity가 모호할 때 확인 모드 진입
+        if (
+          command &&
+          command.intent === "add_item" &&
+          command.confidence !== undefined &&
+          command.confidence < 0.6
+        ) {
+          const entityStr = command.entity || "";
+          setPendingConfirmation({
+            menuName: entityStr,
+            quantity: command.quantity || 1,
+            originalTranscript: trimmedTranscript,
+          });
+          setResponse(
+            `혹시 "${entityStr}"를 ${
+              command.quantity || 1
+            }개 주문하시겠습니까? 예 또는 아니오로 답해주세요.`
+          );
+          speak(
+            `혹시 "${entityStr}"를 ${
+              command.quantity || 1
+            }개 주문하시겠습니까? 예 또는 아니오로 답해주세요.`
+          );
+          setIsProcessing(false);
+          return;
+        }
+
+        if (command) {
+          handleVoiceCommand(command);
+        } else {
+          setResponse("명령을 이해하지 못했습니다. 다시 말씀해주세요.");
+          speak("명령을 이해하지 못했습니다. 다시 말씀해주세요.");
+        }
+      } catch (error) {
+        console.error("음성 명령 분석 실패:", error);
+        setResponse("음성 분석 중 오류가 발생했습니다. 다시 시도해주세요.");
+        speak("음성 분석 중 오류가 발생했습니다. 다시 시도해주세요.");
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    analyzeCommand();
+
+    // 5초 후 transcript와 처리된 명령 기록 클리어
+    const clearTimer = setTimeout(() => {
+      resetTranscript();
+      setProcessedCommands(new Set());
+      if (
+        !isProcessing &&
+        isVisible &&
+        !pendingConfirmation &&
+        !menuSelectionCandidates
+      ) {
+        startListening();
+      }
+    }, 5000);
+
+    return () => clearTimeout(clearTimer);
   }, [
     transcript,
     processCommandWithGPT,
@@ -340,6 +566,10 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
     isVisible,
     processedCommands,
     state.menuItems,
+    pendingConfirmation,
+    handleConfirmOrder,
+    menuSelectionCandidates,
+    handleMenuCandidateSelect,
   ]);
 
   // 초기 안내 메시지
@@ -421,7 +651,12 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
         <Button
           variant={isListening ? "error" : "success"}
           onClick={toggleListening}
-          disabled={isSpeaking || isProcessing}
+          disabled={
+            isSpeaking ||
+            isProcessing ||
+            !!pendingConfirmation ||
+            !!menuSelectionCandidates
+          }
         >
           {isProcessing ? "⏳ 처리중" : isListening ? "🛑 중지" : "🎤 시작"}
         </Button>
@@ -436,6 +671,42 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
           </Button>
         )}
       </VoiceControls>
+
+      {/* 후보 메뉴 선택 UI */}
+      {menuSelectionCandidates && (
+        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+          {menuSelectionCandidates.candidates.map((name) => (
+            <Button
+              key={name}
+              variant="primary"
+              onClick={() => handleMenuCandidateSelect(name)}
+              disabled={isProcessing}
+            >
+              {name}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {/* 예/아니오 버튼 UI */}
+      {pendingConfirmation && (
+        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+          <Button
+            variant="success"
+            onClick={() => handleConfirmOrder(true)}
+            disabled={isProcessing}
+          >
+            예
+          </Button>
+          <Button
+            variant="error"
+            onClick={() => handleConfirmOrder(false)}
+            disabled={isProcessing}
+          >
+            아니오
+          </Button>
+        </div>
+      )}
 
       {error && (
         <div
