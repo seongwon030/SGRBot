@@ -273,7 +273,13 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang }) => {
                 padding="lg"
                 style={{ position: "relative" }}
               >
-                <MenuImage>🍽️ 이미지</MenuImage>
+                <MenuImage>
+                  <img
+                    src={menu.image || "/logo192.png"}
+                    alt={menu.name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px" }}
+                  />
+                </MenuImage>
 
                 <MenuInfo>
                   <MenuName>{menu.name}</MenuName>

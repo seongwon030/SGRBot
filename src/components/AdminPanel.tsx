@@ -115,12 +115,23 @@ export const AdminPanel: React.FC = () => {
     price: "",
     category: "",
     available: true,
+    image: "",
   });
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     order: "",
   });
   const [feedback, setFeedback] = useState("");
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const blobUrl = URL.createObjectURL(file);
+      setMenuForm({ ...menuForm, image: blobUrl });
+      setImagePreview(blobUrl);
+    }
+  };
 
   const handleMenuSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +159,7 @@ export const AdminPanel: React.FC = () => {
         price: Number(menuForm.price),
         category: menuForm.category,
         available: menuForm.available,
+        image: menuForm.image || '/logo192.png',
       };
 
       if (editingMenu) {
@@ -166,7 +178,9 @@ export const AdminPanel: React.FC = () => {
         price: "",
         category: "",
         available: true,
+        image: "",
       });
+      setImagePreview("");
       setIsAddingMenu(false);
 
       // 3초 후 피드백 메시지 제거
@@ -219,7 +233,9 @@ export const AdminPanel: React.FC = () => {
       price: menu.price.toString(),
       category: menu.category,
       available: menu.available,
+      image: menu.image || "",
     });
+    setImagePreview(menu.image || "");
     setIsAddingMenu(true);
   };
 
@@ -405,6 +421,17 @@ export const AdminPanel: React.FC = () => {
                       </option>
                     ))}
                   </Select>
+                </FormGroup>
+                <FormGroup>
+                  <Label>이미지</Label>
+                  <input type="file" accept="image/*" onChange={handleImageChange} />
+                  {(imagePreview || menuForm.image) && (
+                    <img
+                      src={imagePreview || menuForm.image}
+                      alt="미리보기"
+                      style={{ width: 120, height: 120, objectFit: "cover", marginTop: 8 }}
+                    />
+                  )}
                 </FormGroup>
               </FormGrid>
               <Flex gap={theme.spacing.md} align="center">
