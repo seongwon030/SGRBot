@@ -46,6 +46,7 @@ const initialState: AppState = {
       price: 8500,
       category: "1",
       available: true,
+      image: "/chicken.png",
     },
     {
       id: "2",
@@ -55,6 +56,7 @@ const initialState: AppState = {
       price: 9500,
       category: "1",
       available: true,
+      image: "/beef.png",
     },
     {
       id: "3",
@@ -64,6 +66,7 @@ const initialState: AppState = {
       price: 3500,
       category: "2",
       available: true,
+      image: "/potato.png",
     },
     {
       id: "4",
@@ -73,6 +76,7 @@ const initialState: AppState = {
       price: 2000,
       category: "3",
       available: true,
+      image: "/cola.png",
     },
   ],
   cart: [],

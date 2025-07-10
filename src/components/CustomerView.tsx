@@ -335,41 +335,51 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
           </h2>
 
           <MenuGrid>
-            {filteredMenus.map((menu) => (
-              <MenuCard
-                key={menu.id}
-                padding="lg"
-                style={{ position: "relative" }}
-              >
-                <MenuImage>
-                  <img
-                    src={menu.image || "/logo192.png"}
-                    alt={menu.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px" }}
-                  />
-                </MenuImage>
+            {filteredMenus.map((menu) => {
+              console.log('메뉴 이미지 확인:', menu.name, menu.image);
+              return (
+                <MenuCard
+                  key={menu.id}
+                  padding="lg"
+                  style={{ position: "relative" }}
+                >
+                  <MenuImage>
+                    <img
+                      src={
+                        menu.image ||
+                        (menu.name.includes("치킨") ? "/chicken.png"
+                          : menu.name.includes("비프") ? "/beef.png"
+                          : menu.name.includes("감자") ? "/potato.png"
+                          : menu.name.includes("콜라") ? "/cola.png"
+                          : "/logo192.png")
+                      }
+                      alt={menu.name}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px" }}
+                    />
+                  </MenuImage>
 
-                <MenuInfo>
-                  <MenuName>{menu.name}</MenuName>
-                  <MenuDescription>{menu.description}</MenuDescription>
-                </MenuInfo>
+                  <MenuInfo>
+                    <MenuName>{menu.name}</MenuName>
+                    <MenuDescription>{menu.description}</MenuDescription>
+                  </MenuInfo>
 
-                <MenuFooter>
-                  <Price>{menu.price.toLocaleString()}원</Price>
-                  <Button
-                    size="sm"
-                    disabled={!menu.available}
-                    onClick={() => addToCart(menu)}
-                  >
-                    담기
-                  </Button>
-                </MenuFooter>
+                  <MenuFooter>
+                    <Price>{menu.price.toLocaleString()}원</Price>
+                    <Button
+                      size="sm"
+                      disabled={!menu.available}
+                      onClick={() => addToCart(menu)}
+                    >
+                      담기
+                    </Button>
+                  </MenuFooter>
 
-                {!menu.available && (
-                  <UnavailableOverlay>품절</UnavailableOverlay>
-                )}
-              </MenuCard>
-            ))}
+                  {!menu.available && (
+                    <UnavailableOverlay>품절</UnavailableOverlay>
+                  )}
+                </MenuCard>
+              );
+            })}
           </MenuGrid>
 
           {filteredMenus.length === 0 && (

@@ -8,7 +8,7 @@ export const menuItems: MenuItem[] = [
     description: "바삭한 치킨 패티와 신선한 야채가 어우러진 치킨버거",
     price: 5500,
     category: "burger",
-    image: "/logo192.png",
+    image: "/chicken.png",
     available: true,
   },
   {
@@ -18,7 +18,7 @@ export const menuItems: MenuItem[] = [
     description: "두툼한 소고기 패티와 치즈가 어우러진 비프버거",
     price: 6000,
     category: "burger",
-    image: "/logo512.png",
+    image: "/beef.png",
     available: true,
   },
   {
