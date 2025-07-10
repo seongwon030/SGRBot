@@ -780,7 +780,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
           </Button>
         )}
       </VoiceControls>
-
+    
       {/* 후보 메뉴 선택 UI */}
       {menuSelectionCandidates && (
         <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
@@ -795,7 +795,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
             </Button>
           ))}
         </div>
-      )}
+      )} 
 
       {/* 예/아니오 버튼 UI */}
       {pendingConfirmation && (
