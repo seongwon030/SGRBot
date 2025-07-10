@@ -144,7 +144,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
     processCommand,
     processCommandWithGPT,
   } = useSpeechRecognition({ lang });
-  const { speak, stop: stopSpeaking, isSpeaking } = useSpeechSynthesis();
+  const { speak, stop: stopSpeaking, isSpeaking } = useSpeechSynthesis(lang);
 
   const [response, setResponse] = useState(
     "안녕하세요! 음성으로 주문을 도와드리겠습니다."
@@ -166,6 +166,19 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
     quantity: number;
     originalTranscript: string;
   } | null>(null);
+
+  const GUIDE_MESSAGES: Record<string, string> = {
+    "ko-KR": "원하는 메뉴를 말씀해주세요.",
+    "en-US": "Please tell me the menu you want.",
+    "zh-CN": "请告诉我您想要的菜单。",
+    "ja-JP": "ご希望のメニューをお知らせください。",
+    "es-ES": "Por favor, dígame el menú que desea.",
+    "fr-FR": "Veuillez indiquer le menu souhaité.",
+    "de-DE": "Bitte nennen Sie das gewünschte Menü.",
+    "ru-RU": "Пожалуйста, скажите, какое меню вы хотите.",
+    "vi-VN": "Vui lòng cho biết thực đơn bạn muốn.",
+    "th-TH": "กรุณาบอกเมนูที่คุณต้องการ",
+  };
 
   // 음성 명령 처리
   const handleVoiceCommand = useCallback(
@@ -681,15 +694,14 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
     handleMenuCandidateSelect,
   ]);
 
-  // 초기 안내 메시지
+  // 초기 안내 메시지 (다국어)
   useEffect(() => {
     if (isVisible) {
-      speak(
-        "원하는 메뉴를 말씀해주세요."
-      );
-      setResponse("🎤 시작 버튼을 눌러 음성 주문을 시작하세요!");
+      const msg = GUIDE_MESSAGES[lang] || GUIDE_MESSAGES["en-US"];
+      speak(msg);
+      setResponse(msg);
     }
-  }, [isVisible, speak]);
+  }, [isVisible, speak, lang]);
 
   const toggleListening = () => {
     if (isListening) {

@@ -7,7 +7,7 @@ interface UseSpeechSynthesisReturn {
   isSupported: boolean;
 }
 
-export const useSpeechSynthesis = (): UseSpeechSynthesisReturn => {
+export const useSpeechSynthesis = (lang: string = "ko-KR"): UseSpeechSynthesisReturn => {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const isSupported =
@@ -21,7 +21,7 @@ export const useSpeechSynthesis = (): UseSpeechSynthesisReturn => {
       speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "ko-KR";
+      utterance.lang = lang;
       utterance.rate = 0.9;
       utterance.pitch = 1;
       utterance.volume = 1;
@@ -40,7 +40,7 @@ export const useSpeechSynthesis = (): UseSpeechSynthesisReturn => {
 
       speechSynthesis.speak(utterance);
     },
-    [isSupported]
+    [isSupported, lang]
   );
 
   const stop = useCallback(() => {
