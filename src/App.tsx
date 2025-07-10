@@ -20,12 +20,19 @@ const KioskMain: React.FC<{ lang: string; setLang: (lang: string) => void }> = (
 
 // App 컴포넌트
 const App: React.FC = () => {
-  const [lang, setLang] = useState<string>("ko-KR");
+  const [lang, setLang] = useState<string>(() => {
+    return localStorage.getItem('selectedLang') || 'ko-KR';
+  });
+
+  const handleSetLang = (value: string) => {
+    setLang(value);
+    localStorage.setItem('selectedLang', value);
+  };
 
   return (
     <ThemeProvider theme={theme}>
       <KioskProvider>
-        <KioskMain lang={lang} setLang={setLang} />
+        <KioskMain lang={lang} setLang={handleSetLang} />
       </KioskProvider>
     </ThemeProvider>
   );

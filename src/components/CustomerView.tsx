@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useKiosk } from "../context/KioskContext";
 import { MenuItem, Order } from "../types";
@@ -6,6 +6,14 @@ import { Button, Card, Grid, Flex, theme } from "../styles/GlobalStyle";
 import { Cart } from "./Cart";
 import { VoiceBot } from "./VoiceBot";
 import { Payment } from "./Payment";
+
+// window 타입 확장 (구글 번역 위젯용)
+declare global {
+  interface Window {
+    googleTranslateElementInit?: () => void;
+    google?: any;
+  }
+}
 
 const CustomerContainer = styled.div`
   min-height: 100vh;
@@ -208,6 +216,27 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
     dispatch({ type: "SET_VOICE_MODE", payload: false });
   };
 
+  // 구글 번역 위젯 스크립트 동적 삽입
+  useEffect(() => {
+    // 이미 스크립트가 있으면 중복 삽입 방지
+    if (document.getElementById('google-translate-script')) return;
+
+    // 콜백 함수 window에 등록
+    window.googleTranslateElementInit = function () {
+      new window.google.translate.TranslateElement({
+        pageLanguage: 'ko',
+        includedLanguages: 'en,zh-CN,ja,es,fr,de,ru,vi,th,ko',
+        layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
+      }, 'google_translate_element');
+    };
+
+    const script = document.createElement('script');
+    script.id = 'google-translate-script';
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
   return (
     <CustomerContainer>
       <Header>
@@ -229,6 +258,9 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
           </Flex>
         </HeaderContent>
       </Header>
+
+      {/* 구글 번역 위젯 */}
+      <div id="google_translate_element" style={{ display: 'none' }}></div>
 
       <CategoryNav>
         <Flex justify="space-between" align="center">
@@ -253,7 +285,24 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
           </CategoryTabs>
           <select
             value={lang}
-            onChange={e => setLang(e.target.value)}
+            onChange={e => {
+              setLang(e.target.value);
+              const langMap: Record<string, string> = {
+                'ko-KR': 'ko',
+                'en-US': 'en',
+                'zh-CN': 'zh-CN',
+                'ja-JP': 'ja',
+                'es-ES': 'es',
+                'fr-FR': 'fr',
+                'de-DE': 'de',
+                'ru-RU': 'ru',
+                'vi-VN': 'vi',
+                'th-TH': 'th',
+              };
+              const target = langMap[(e.target.value as string)] || 'ko';
+              window.location.hash = `#googtrans(ko|${target})`;
+              window.location.reload();
+            }}
             style={{ fontSize: 16, padding: 6, borderRadius: 8 }}
           >
             <option value="ko-KR">한국어</option>
