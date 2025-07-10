@@ -158,6 +158,8 @@ interface PaymentProps {
   order: Order | null;
   onClose: () => void;
   onPaymentComplete: (order: Order) => void;
+  selectedMethod: "card" | "cash" | "digital";
+  setSelectedMethod: React.Dispatch<React.SetStateAction<"card" | "cash" | "digital">>;
 }
 
 export const Payment: React.FC<PaymentProps> = ({
@@ -165,11 +167,10 @@ export const Payment: React.FC<PaymentProps> = ({
   order,
   onClose,
   onPaymentComplete,
+  selectedMethod,
+  setSelectedMethod,
 }) => {
   const { dispatch } = useKiosk();
-  const [selectedMethod, setSelectedMethod] = useState<
-    "card" | "cash" | "digital"
-  >("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [countdown, setCountdown] = useState(5);

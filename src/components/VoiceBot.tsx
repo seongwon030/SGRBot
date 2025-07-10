@@ -129,9 +129,10 @@ interface VoiceBotProps {
   isVisible: boolean;
   onClose: () => void;
   lang: string;
+  setPaymentMethod: (method: "card" | "cash" | "digital") => void;
 }
 
-export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) => {
+export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang, setPaymentMethod }) => {
   const { state, dispatch } = useKiosk();
   const {
     isListening,
@@ -185,6 +186,28 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
     (command: VoiceCommand) => {
       setIsProcessing(true);
       let responseMessage = "";
+
+      // 결제 방식 음성 명령 인식
+      if (command.intent === "checkout" && command.entity) {
+        const entity = (command.entity || "").toLowerCase();
+        if (entity.includes("카드") || entity.includes("card")) {
+          setPaymentMethod("card");
+          responseMessage = "카드 결제 방식이 선택되었습니다.";
+        } else if (entity.includes("현금") || entity.includes("cash")) {
+          setPaymentMethod("cash");
+          responseMessage = "현금 결제 방식이 선택되었습니다.";
+        } else if (
+          entity.includes("간편") ||
+          entity.includes("삼성") ||
+          entity.includes("애플") ||
+          entity.includes("네이버") ||
+          entity.includes("digital") ||
+          entity.includes("pay")
+        ) {
+          setPaymentMethod("digital");
+          responseMessage = "간편결제 방식이 선택되었습니다.";
+        }
+      }
 
       switch (command.intent) {
         case "add_item":
@@ -361,7 +384,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
       speak(responseMessage);
       setIsProcessing(false);
     },
-    [state.menuItems, state.cart, dispatch, speak]
+    [state.menuItems, state.cart, dispatch, speak, setPaymentMethod]
   );
 
   // 예/아니오 확인 처리 함수

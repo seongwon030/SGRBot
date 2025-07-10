@@ -188,6 +188,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
     state.categories[0]?.id || ""
   );
   const [showPayment, setShowPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"card" | "cash" | "digital">("card");
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const filteredMenus = state.menuItems.filter(
     (item) => selectedCategory === "" || item.category === selectedCategory
@@ -205,11 +207,15 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
   const handleCheckout = () => {
     if (state.cart.length === 0) return;
     setShowPayment(true);
+    // 결제 모달 열 때 결제 방식 초기화(필요시)
+    // setSelectedPaymentMethod("card");
   };
 
   const handlePaymentComplete = (order: Order) => {
     console.log("주문 완료:", order);
     setShowPayment(false);
+    setPaymentSuccess(true);
+    setTimeout(() => setPaymentSuccess(false), 3000);
   };
 
   const handleCloseVoiceBot = () => {
@@ -239,6 +245,26 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
 
   return (
     <CustomerContainer>
+      {paymentSuccess && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "#4caf50",
+            color: "#fff",
+            padding: "32px 56px",
+            borderRadius: 16,
+            fontSize: 26,
+            zIndex: 3000,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            fontWeight: 600,
+          }}
+        >
+          ✅ 결제가 완료되었습니다!
+        </div>
+      )}
       <Header>
         <HeaderContent>
           <Logo>🍔 맛있는 키오스크</Logo>
@@ -407,7 +433,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
       </AdminButton>
 
       {/* 음성 봇 */}
-      <VoiceBot isVisible={state.isVoiceMode} onClose={handleCloseVoiceBot} lang={lang} />
+      <VoiceBot isVisible={state.isVoiceMode} onClose={handleCloseVoiceBot} lang={lang} setPaymentMethod={setSelectedPaymentMethod} />
 
       {/* 결제 모달 */}
       <Payment
@@ -415,6 +441,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => 
         order={state.currentOrder}
         onClose={() => setShowPayment(false)}
         onPaymentComplete={handlePaymentComplete}
+        selectedMethod={selectedPaymentMethod}
+        setSelectedMethod={setSelectedPaymentMethod}
       />
     </CustomerContainer>
   );
