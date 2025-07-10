@@ -171,9 +171,10 @@ const AdminButton = styled(Button)`
 
 interface CustomerViewProps {
   lang: string;
+  setLang: (lang: string) => void;
 }
 
-export const CustomerView: React.FC<CustomerViewProps> = ({ lang }) => {
+export const CustomerView: React.FC<CustomerViewProps> = ({ lang, setLang }) => {
   const { state, dispatch } = useKiosk();
   const [selectedCategory, setSelectedCategory] = useState(
     state.categories[0]?.id || ""
@@ -230,25 +231,43 @@ export const CustomerView: React.FC<CustomerViewProps> = ({ lang }) => {
       </Header>
 
       <CategoryNav>
-        <CategoryTabs>
-          <CategoryTab
-            active={selectedCategory === ""}
-            onClick={() => setSelectedCategory("")}
+        <Flex justify="space-between" align="center">
+          <CategoryTabs>
+            <CategoryTab
+              active={selectedCategory === ""}
+              onClick={() => setSelectedCategory("")}
+            >
+              전체
+            </CategoryTab>
+            {state.categories
+              .sort((a, b) => a.order - b.order)
+              .map((category) => (
+                <CategoryTab
+                  key={category.id}
+                  active={selectedCategory === category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  {category.name}
+                </CategoryTab>
+              ))}
+          </CategoryTabs>
+          <select
+            value={lang}
+            onChange={e => setLang(e.target.value)}
+            style={{ fontSize: 16, padding: 6, borderRadius: 8 }}
           >
-            전체
-          </CategoryTab>
-          {state.categories
-            .sort((a, b) => a.order - b.order)
-            .map((category) => (
-              <CategoryTab
-                key={category.id}
-                active={selectedCategory === category.id}
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                {category.name}
-              </CategoryTab>
-            ))}
-        </CategoryTabs>
+            <option value="ko-KR">한국어</option>
+            <option value="en-US">영어</option>
+            <option value="zh-CN">중국어</option>
+            <option value="ja-JP">일본어</option>
+            <option value="es-ES">스페인어</option>
+            <option value="fr-FR">프랑스어</option>
+            <option value="de-DE">독일어</option>
+            <option value="ru-RU">러시아어</option>
+            <option value="vi-VN">베트남어</option>
+            <option value="th-TH">태국어</option>
+          </select>
+        </Flex>
       </CategoryNav>
 
       <MainContent>
