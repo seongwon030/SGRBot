@@ -25,7 +25,7 @@ interface UseSpeechRecognitionReturn {
   ) => Promise<VoiceCommand | null>;
 }
 
-export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
+export const useSpeechRecognition = ({ lang = "ko-KR" }: { lang?: string }): UseSpeechRecognitionReturn => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
 
     recognitionInstance.continuous = false; // 한 번에 하나의 명령만 처리
     recognitionInstance.interimResults = false;
-    recognitionInstance.lang = "ko-KR";
+    recognitionInstance.lang = lang;
 
     recognitionInstance.onstart = () => {
       setIsListening(true);
@@ -80,7 +80,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionReturn => {
         recognitionInstance.stop();
       }
     };
-  }, [isSupported]);
+  }, [isSupported, lang]);
 
   const startListening = useCallback(() => {
     if (recognition && !isListening) {

@@ -169,7 +169,11 @@ const AdminButton = styled(Button)`
   z-index: 1000;
 `;
 
-export const CustomerView: React.FC = () => {
+interface CustomerViewProps {
+  lang: string;
+}
+
+export const CustomerView: React.FC<CustomerViewProps> = ({ lang }) => {
   const { state, dispatch } = useKiosk();
   const [selectedCategory, setSelectedCategory] = useState(
     state.categories[0]?.id || ""
@@ -319,7 +323,7 @@ export const CustomerView: React.FC = () => {
       </AdminButton>
 
       {/* 음성 봇 */}
-      <VoiceBot isVisible={state.isVoiceMode} onClose={handleCloseVoiceBot} />
+      <VoiceBot isVisible={state.isVoiceMode} onClose={handleCloseVoiceBot} lang={lang} />
 
       {/* 결제 모달 */}
       <Payment

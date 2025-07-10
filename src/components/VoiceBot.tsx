@@ -128,9 +128,10 @@ const CommandList = styled.ul`
 interface VoiceBotProps {
   isVisible: boolean;
   onClose: () => void;
+  lang: string;
 }
 
-export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
+export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) => {
   const { state, dispatch } = useKiosk();
   const {
     isListening,
@@ -142,7 +143,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose }) => {
     error,
     processCommand,
     processCommandWithGPT,
-  } = useSpeechRecognition();
+  } = useSpeechRecognition({ lang });
   const { speak, stop: stopSpeaking, isSpeaking } = useSpeechSynthesis();
 
   const [response, setResponse] = useState(
