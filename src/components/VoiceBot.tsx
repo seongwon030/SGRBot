@@ -649,7 +649,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
 
     analyzeCommand();
 
-    // 5초 후 transcript와 처리된 명령 기록 클리어
+    // 2초 후 transcript와 처리된 명령 기록 클리어
     const clearTimer = setTimeout(() => {
       resetTranscript();
       setProcessedCommands(new Set());
@@ -661,7 +661,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
       ) {
         startListening();
       }
-    }, 5000);
+    }, 1000);
 
     return () => clearTimeout(clearTimer);
   }, [
@@ -685,7 +685,7 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
   useEffect(() => {
     if (isVisible) {
       speak(
-        "음성 주문 모드가 활성화되었습니다. 시작 버튼을 누르고 원하는 메뉴를 말씀해주세요."
+        "원하는 메뉴를 말씀해주세요."
       );
       setResponse("🎤 시작 버튼을 눌러 음성 주문을 시작하세요!");
     }
@@ -867,7 +867,6 @@ export const VoiceBot: React.FC<VoiceBotProps> = ({ isVisible, onClose, lang }) 
           </p>
         </HelpCommands>
       )}
-      <div>GPT 결과: {gptResult}</div>
     </VoiceBotContainer>
   );
 };

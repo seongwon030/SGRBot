@@ -2,7 +2,7 @@ import React from "react";
 
 const LANGUAGES = [
   { label: "한국어", value: "ko-KR" },
-  { label: "영어(미국)", value: "en-US" },
+  { label: "영어", value: "en-US" },
   { label: "중국어", value: "zh-CN" },
   { label: "일본어", value: "ja-JP" },
   { label: "스페인어", value: "es-ES" },
